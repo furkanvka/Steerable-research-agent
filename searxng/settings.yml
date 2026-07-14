@@ -1,0 +1,40 @@
+use_default_settings: true
+
+server:
+  port: 8080
+  bind_address: "0.0.0.0"
+  secret_key: "ultrasecretkeyforlocalsearchagent"
+  limiter: false          # bot/rate-limit korumasını lokal kullanım için kapat
+  image_proxy: true
+
+search:
+  formats:
+    - html
+    - json
+  safe_search: 0
+
+# Sorunlu/agresif korumalı engine'leri kapat, sorun çıkarmayanları aç
+engines:
+  - name: duckduckgo
+    disabled: true
+
+  - name: startpage
+    disabled: true
+
+  - name: brave
+    disabled: true
+
+  - name: bing
+    disabled: false
+
+  - name: google
+    disabled: false
+
+  - name: qwant
+    disabled: false
+
+  - name: mojeek
+    disabled: false
+
+  - name: wikipedia
+    disabled: false

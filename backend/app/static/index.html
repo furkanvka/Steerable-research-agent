@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Search Agent (LSA)</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --surface-color: #151d30;
+            --surface-hover: #1e2942;
+            --primary-color: #4f46e5;
+            --primary-glow: rgba(79, 70, 229, 0.4);
+            --secondary-color: #10b981;
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #2e3b56;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            background-color: rgba(21, 29, 48, 0.5);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #818cf8, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
+        /* Form Controls */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .search-container {
+            display: flex;
+            gap: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.85rem 1.25rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        select {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.85rem 1.25rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+            width: 180px;
+        }
+
+        select:focus {
+            border-color: var(--primary-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0.85rem 1.75rem;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            background-color: #334155;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Status and Live State */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-idle { background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); }
+        .status-planning { background: rgba(245, 158, 11, 0.15); color: var(--warning-color); }
+        .status-searching { background: rgba(79, 70, 229, 0.15); color: #818cf8; }
+        .status-reflecting { background: rgba(16, 185, 129, 0.15); color: var(--secondary-color); }
+        .status-awaiting { background: rgba(239, 68, 68, 0.15); color: var(--danger-color); animation: pulse 1.5s infinite; }
+        .status-done { background: rgba(16, 185, 129, 0.2); color: var(--secondary-color); }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* Logs / Terminal */
+        .terminal {
+            background-color: #05070c;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            max-height: 250px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            margin-top: 1rem;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .log-time { color: #475569; }
+        .log-text { color: #e2e8f0; }
+        .log-info { color: #38bdf8; }
+        .log-warn { color: var(--warning-color); }
+        .log-success { color: var(--secondary-color); }
+
+        /* Interactive Human Review Panel */
+        .review-panel {
+            background-color: rgba(239, 68, 68, 0.05);
+            border: 1px solid var(--danger-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            display: none;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .review-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .topics-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .topic-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background-color: var(--bg-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .topic-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .topic-row:focus-within {
+            border-color: var(--primary-color);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-success { background-color: var(--secondary-color); }
+        .btn-danger { background-color: var(--danger-color); }
+
+        /* Summary Output */
+        .summary-card {
+            display: none;
+        }
+
+        .summary-content {
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            white-space: pre-wrap;
+            color: #e2e8f0;
+            font-size: 1.05rem;
+            margin-top: 1rem;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric-box {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .metric-lbl {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🔍 Local Search Agent (LSA)</h1>
+        <div>
+            <span id="session-badge" class="status-badge status-idle">Boşta</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Search and Config Card -->
+        <div class="card">
+            <div class="form-group">
+                <label for="query-input">Araştırma Konusu</label>
+                <div class="search-container">
+                    <input type="text" id="query-input" placeholder="Örn: Yapay zekanın tıp alanındaki güncel uygulamaları...">
+                    <select id="model-select">
+                        <option value="qwen3:8b">qwen3:8b</option>
+                    </select>
+                    <button id="start-btn" onclick="startResearch()">Araştır</button>
+                </div>
+            </div>
+            
+            <div class="metric-grid" id="metrics" style="display: none;">
+                <div class="metric-box">
+                    <div class="metric-val" id="metric-findings">0</div>
+                    <div class="metric-lbl">Toplanan Bilgiler</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-val" id="metric-status">-</div>
+                    <div class="metric-lbl">Aktif İşlem</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Human Review Interrupt Card -->
+        <div class="card review-panel" id="review-panel">
+            <div class="review-title">🙋‍♂️ Araştırma Planı Onayı Gerekiyor</div>
+            <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                Ollama modeliniz aşağıdaki alt başlıkları araştırmak üzere planladı. Başlıkları düzenleyebilir, silebilir veya onaylayabilirsiniz.
+            </p>
+            <div class="topics-list" id="topics-list">
+                <!-- Topics will be dynamically placed here -->
+            </div>
+            <button style="background-color: var(--surface-hover); border: 1px dashed var(--primary-color); color: var(--text-main); font-size: 0.9rem; padding: 0.5rem 1rem; width: fit-content; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;" onclick="addNewTopicRow()">➕ Yeni Başlık Ekle</button>
+            <div class="action-buttons" style="margin-top: 1rem;">
+                <button class="btn-success" style="width: 100%;" onclick="submitDecision()">Onayla ve Araştırmayı Başlat</button>
+            </div>
+        </div>
+
+        <!-- Progress and Terminal -->
+        <div class="card" id="progress-card" style="display: none;">
+            <label>Araştırma Süreci Günlükleri</label>
+            <div class="terminal" id="terminal-logs">
+                <div class="log-entry">
+                    <span class="log-time">[Sistem]</span>
+                    <span class="log-text log-info">Araştırma başlatılmaya hazır...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Final Summary -->
+        <div class="card summary-card" id="summary-card">
+            <h2 style="font-size: 1.3rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">📝 Araştırma Sonuç Raporu</h2>
+            <div class="summary-content" id="summary-content">
+                <!-- Sentezlenmiş özet buraya gelecek -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = null;
+        let ws = null;
+        let originalPlan = [];
+
+        // Load models list dynamically
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models');
+                const data = await response.json();
+                const select = document.getElementById('model-select');
+                select.innerHTML = '';
+                data.models.forEach(model => {
+                    const opt = document.createElement('option');
+                    opt.value = model;
+                    opt.textContent = model;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Modeller yüklenirken hata:", err);
+            }
+        }
+
+        window.onload = loadModels;
+
+        function log(msg, type = 'info') {
+            const term = document.getElementById('terminal-logs');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            const now = new Date();
+            timeSpan.textContent = `[${now.toLocaleTimeString()}]`;
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = `log-text log-${type}`;
+            textSpan.textContent = msg;
+            
+            entry.appendChild(timeSpan);
+            entry.appendChild(textSpan);
+            term.appendChild(entry);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function updateBadge(status) {
+            const badge = document.getElementById('session-badge');
+            badge.className = 'status-badge';
+            
+            if (status === 'planning') {
+                badge.classList.add('status-planning');
+                badge.textContent = 'Planlanıyor';
+            } else if (status === 'searching') {
+                badge.classList.add('status-searching');
+                badge.textContent = 'Aranıyor';
+            } else if (status === 'reflecting') {
+                badge.classList.add('status-reflecting');
+                badge.textContent = 'Analiz Ediliyor';
+            } else if (status === 'awaiting_human') {
+                badge.classList.add('status-awaiting');
+                badge.textContent = 'Onay Bekliyor';
+            } else if (status === 'done') {
+                badge.classList.add('status-done');
+                badge.textContent = 'Tamamlandı';
+            } else {
+                badge.classList.add('status-idle');
+                badge.textContent = 'Boşta';
+            }
+        }
+
+        async function startResearch() {
+            const query = document.getElementById('query-input').value.trim();
+            const model = document.getElementById('model-select').value;
+            const startBtn = document.getElementById('start-btn');
+
+            if (!query) {
+                alert("Lütfen bir araştırma konusu girin.");
+                return;
+            }
+
+            startBtn.disabled = true;
+            document.getElementById('progress-card').style.display = 'block';
+            document.getElementById('metrics').style.display = 'grid';
+            document.getElementById('summary-card').style.display = 'none';
+            document.getElementById('review-panel').style.display = 'none';
+            
+            log(`Yeni araştırma başlatılıyor: "${query}"`, 'info');
+
+            try {
+                const response = await fetch('/api/research/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        model: model,
+                        max_iterations: 3
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error("HTTP Hata: " + response.status);
+                }
+
+                const data = await response.json();
+                sessionId = data.session_id;
+                log(`Araştırma oturumu oluşturuldu. Session ID: ${sessionId}`, 'success');
+                
+                // Establish WebSocket Connection
+                connectWebSocket(sessionId);
+
+            } catch (err) {
+                log(`Oturum başlatılamadı: ${err.message}`, 'warn');
+                startBtn.disabled = false;
+            }
+        }
+
+        function connectWebSocket(id) {
+            const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProto}//${window.location.host}/api/ws/research/${id}`;
+            
+            log(`WebSocket bağlantısı kuruluyor: ${wsUrl}`, 'info');
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                log("WebSocket bağlantısı başarılı.", "success");
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'state') {
+                    handleStateUpdate(data.state);
+                }
+            };
+
+            ws.onerror = (err) => {
+                log(`WebSocket hatası oluştu.`, 'warn');
+            };
+
+            ws.onclose = () => {
+                log("WebSocket bağlantısı sonlandırıldı.", "info");
+                document.getElementById('start-btn').disabled = false;
+            };
+        }
+
+        function handleStateUpdate(state) {
+            updateBadge(state.status);
+            
+            // Update metrics
+            document.getElementById('metric-findings').textContent = state.findings ? state.findings.length : 0;
+            document.getElementById('metric-status').textContent = state.status || '-';
+
+            // Logs output based on status changes
+            if (state.status === 'planning') {
+                log("Ollama üzerinden araştırma planı (alt başlıklar) oluşturuluyor...", "info");
+            } else if (state.status === 'awaiting_human') {
+                log("Grafik durduruldu (Interrupt). Kullanıcı onayı bekleniyor...", "warn");
+                showReviewPanel(state.plan || []);
+            } else if (state.status === 'searching') {
+                log("Alt başlıklar paralel olarak SearXNG üzerinde aranıyor...", "info");
+            } else if (state.status === 'compressing') {
+                log("Arama bulguları ayıklanıyor ve gürültüden temizleniyor...", "info");
+            } else if (state.status === 'done') {
+                log("Araştırma başarıyla tamamlandı. Rapor yazılıyor...", "success");
+                showSummary(state.summary);
+            }
+        }
+
+        function removeTopicRow(button) {
+            const row = button.closest('.topic-row');
+            if (row) {
+                row.remove();
+                log("Alt konu başlığı plandan çıkarıldı.", "warn");
+            }
+        }
+
+        function showReviewPanel(plan) {
+            originalPlan = plan;
+            const panel = document.getElementById('review-panel');
+            const list = document.getElementById('topics-list');
+            list.innerHTML = '';
+
+            plan.forEach((topic, idx) => {
+                const row = document.createElement('div');
+                row.className = 'topic-row';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'topic-input';
+                input.value = topic;
+                input.id = `topic-${idx}`;
+
+                const skipBtn = document.createElement('button');
+                skipBtn.textContent = 'Çıkar / Atla';
+                skipBtn.style.padding = '0.4rem 0.8rem';
+                skipBtn.style.fontSize = '0.8rem';
+                skipBtn.style.backgroundColor = 'var(--danger-color)';
+                skipBtn.onclick = function() { removeTopicRow(this); };
+
+                row.appendChild(input);
+                row.appendChild(skipBtn);
+                list.appendChild(row);
+            });
+
+            panel.style.display = 'flex';
+        }
+
+        function addNewTopicRow() {
+            const list = document.getElementById('topics-list');
+            const idx = list.children.length;
+            
+            const row = document.createElement('div');
+            row.className = 'topic-row';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'topic-input';
+            input.placeholder = 'Yeni alt konu başlığı girin...';
+            input.id = `topic-${idx}`;
+
+            const skipBtn = document.createElement('button');
+            skipBtn.textContent = 'Çıkar / Atla';
+            skipBtn.style.padding = '0.4rem 0.8rem';
+            skipBtn.style.fontSize = '0.8rem';
+            skipBtn.style.backgroundColor = 'var(--danger-color)';
+            skipBtn.onclick = function() { removeTopicRow(this); };
+
+            row.appendChild(input);
+            row.appendChild(skipBtn);
+            list.appendChild(row);
+            
+            input.focus();
+            log("Yeni alt konu başlığı eklendi.", "info");
+        }
+
+        function submitDecision() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert("WebSocket aktif değil.");
+                return;
+            }
+
+            const inputs = document.querySelectorAll('.topic-input');
+            const approvedPlan = Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== '');
+
+            if (approvedPlan.length === 0) {
+                alert("Lütfen en az bir adet geçerli başlık bırakın veya ekleyin.");
+                return;
+            }
+
+            // Check if modified from original plan
+            const isModified = approvedPlan.length !== originalPlan.length || approvedPlan.some((t, i) => t !== originalPlan[i]);
+            const feedback = isModified ? "edit" : "approved";
+
+            log(`İnsan onayı gönderiliyor: Karar: ${feedback}. Konular: ${approvedPlan.length}`, "info");
+
+            ws.send(JSON.stringify({
+                human_feedback: feedback,
+                approved_plan: approvedPlan
+            }));
+
+            document.getElementById('review-panel').style.display = 'none';
+        }
+
+        function showSummary(summary) {
+            document.getElementById('summary-card').style.display = 'block';
+            document.getElementById('summary-content').textContent = summary;
+        }
+    </script>
+</body>
+</html>
