@@ -1,6 +1,6 @@
 # Steerable-research-agent
 
-Bu proje, yerel yapay zeka modelleri (Ollama) ve yerel arama motoru (SearXNG) entegrasyonu ile çalışan, **insan onaylı (Human-in-the-Loop)**, doğrusal bir araştırma ve arama ajanıdır. Ajanın yönetim akışı **LangGraph** (StateGraph) ile tasarlanmıştır.
+Bu proje, yerel yapay zeka modelleri ( ve yerel arama motoru  entegrasyonu ile çalışan, **insan onaylı (Human-in-the-Loop)**, doğrusal bir araştırma ve arama ajanıdır. Ajanın yönetim akışı **LangGraph** (StateGraph) ile tasarlanmıştır.
 
 ## Proje Mimarisi ve İş Akışı
 
